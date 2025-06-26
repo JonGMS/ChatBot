@@ -5,6 +5,9 @@ node_modules/
 dist/
 build/
 
+# TypeScript build info
+*.tsbuildinfo
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
@@ -13,7 +16,7 @@ yarn-error.log*
 # Environment variables
 .env
 
-# OS-specific
+# OS-specific files
 .DS_Store
 Thumbs.db
 
@@ -23,5 +26,10 @@ Thumbs.db
 # Ngrok executable
 ngrok.exe
 
-# TypeScript
-*.tsbuildinfo
+# Outros binários temporários
+*.exe
+*.out
+*.log
+
+# Arquivos de cache do Jest
+coverage/
