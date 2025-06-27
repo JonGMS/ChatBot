@@ -9,6 +9,8 @@ import { sendMessage } from './twilio';
 import './commands';
 import { getCommand } from './commandManager';
 import { AudioService } from './infra/audio.service';
+import { TranscriptionService } from './infra/transcription.service';
+import { SummarizeService } from './infra/summarize.service';
 
 console.log(process.env.TWILIO_ACCOUNT_SID);
 
@@ -50,5 +52,32 @@ app.get('/download', async (req: Request, res: Response) => {
     }
 
 });
+
+app.post('/transcribe', async (req: Request, res: Response) => {
+    try {
+        const transcriptionService = new TranscriptionService();
+        const audioPath = '/tmp/2856ac24-0984-4526-80d6-484c78b9db8f.mp3';
+
+        if (audioPath == undefined) {
+            res.status(400).send('AudioPath não informada');
+            return;
+        }
+        const response = await transcriptionService.transcribe(audioPath);
+        res.json({ text: response }); 
+    } catch(error) {
+        res.status(500).send(error);
+    }
+});
+
+app.get('/summarize', async (req: Request, res: Response) => {
+    try{
+        const summarizeService = new SummarizeService();
+        const text = 'O que é o OpenAI?';
+        const response = await summarizeService.summarize(text);
+        res.json({ text: response });
+    }catch (error) {
+        res.status(500).send(error);
+    }
+})
 
 app.listen(port, () => console.log(`${port}`));
