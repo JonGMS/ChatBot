@@ -1,5 +1,5 @@
 import axios, { AxiosResponse } from "axios";
-import TranscriptionServiceInterface from "../domain/service/transcription-service.interface";
+import TranscriptionServiceInterface from "../../domain/service/transcription-service.interface";
 import FormData from 'form-data';
 import fs from 'fs';
 

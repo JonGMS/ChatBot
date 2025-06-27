@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import path from "path";
 import fs from "fs";
 import os from "os";
-import AudioServiceInterface from "../domain/service/audio-service.interface";
+import AudioServiceInterface from "../../domain/service/audio-service.interface";
 import axios from "axios";
 import { promisify } from "util";
 import ffmpeg from "fluent-ffmpeg";

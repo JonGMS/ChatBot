@@ -8,9 +8,11 @@ import { sendMessage } from './twilio';
 
 import './commands';
 import { getCommand } from './commandManager';
-import { AudioService } from './infra/audio.service';
-import { TranscriptionService } from './infra/transcription.service';
-import { SummarizeService } from './infra/summarize.service';
+import { AudioService } from './infra/service/audio.service';
+import { TranscriptionService } from './infra/service/transcription.service';
+import { SummarizeService } from './infra/service/summarize.service';
+import { TranscribeMessageUseCase } from './usecase/transcribe-message/transcribe-message.usecases';
+import { MessageMemoryRepository } from './infra/memory/message-memory.repository';
 
 console.log(process.env.TWILIO_ACCOUNT_SID);
 
@@ -22,15 +24,60 @@ app.use(bodyParser.urlencoded({ extended: true }))
 
 
 app.post('/whatsapp', async (req: Request, res :Response) => {
-    const {To, From, Body} = req.body;
+    const {
+        SmsMessageSid,
+        MediaContentType0,
+        NumMedia,
+        ProfileName,
+        WaId,
+        Body,
+        To,
+        From,
+        MediaUrl0,
+        } = req.body;
 
+    if(NumMedia == '1' && MediaContentType0 == 'audio/ogg' && MediaUrl0.length !==0){
+        const audioService = new AudioService();
+        const transcriptionService = new TranscriptionService();
+        const summarizeService = new SummarizeService();
+        const messageRepository = new MessageMemoryRepository();
+
+        const transcribeMessageUseCase = new TranscribeMessageUseCase(
+            transcriptionService, 
+            audioService,
+            summarizeService,
+            messageRepository
+        )
+
+        const response = await transcribeMessageUseCase.execute({
+            smsMessageSid: SmsMessageSid,
+            mediaContentType0: MediaContentType0,
+            numMedia: NumMedia, 
+            profileName: ProfileName,
+            waId: WaId,
+            body: Body,
+            to: To,
+            from: From,
+            mediaUrl0: MediaUrl0
+        })
+        if(!response) {
+            sendMessage(To, From, 'Não foi possivel transcrever a mensagem');
+            return;
+        }
+
+        sendMessage(To, From, response);
+        return;
+    }
+
+
+    //Mensagem inicial
     const [commandName, ...args] = Body.split(' ');
     const command = getCommand(commandName);
     if(command){
         const response = command.execute(args);
         sendMessage(To, From, response);
     }else{
-        sendMessage(To, From, 'Comando não reconhecido. \nEnvie "help" para a lista de comandos disponíveis.');
+        sendMessage(To, From, 'Olá, envie um audio para transcrição ou envie "help" para lista de commando disponiveis.');
     }
 })
 

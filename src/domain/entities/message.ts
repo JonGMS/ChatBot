@@ -8,6 +8,7 @@ export class Message {
         public readonly profileName : string,
         public readonly waId : string,
         public readonly body : string,
+        public readonly to : string,
         public readonly from : string,
         public readonly mediaUrl0 : string,
         public transcriptionText?: string,

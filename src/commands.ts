@@ -1,5 +1,12 @@
 import { addComand, listCommands } from "./commandManager";
 
+
+// addComand({
+//     name: '', 
+//     description: 'Responde com "pong"',
+//     execute: () => 'pong',
+// });
+
 addComand({
     name: 'ping', 
     description: 'Responde com "pong"',
@@ -21,3 +28,4 @@ addComand({
         ).join('\n');
     },
 })
+

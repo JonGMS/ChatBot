@@ -5,6 +5,7 @@ export interface MessageDto{
     profileName : string;
     waId : string;
     body : string;
+    to : string;
     from : string;
     mediaUrl0 : string;
 }
