@@ -3,6 +3,7 @@
     "target": "es2016",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
     "lib": ["es6","dom"],                                        /* Specify a set of bundled library declaration files that describe the target runtime environment. */
     /* Modules */
+    "typeRoots": ["./node_modules/@types", "./src/types"],
     "module": "commonjs",                                /* Specify what module code is generated. */
     "rootDir": "src",                                  /* Specify the root folder within your source files. *             /* Check side effect imports. */
     "resolveJsonModule": true,                        /* Enable importing .json files. */

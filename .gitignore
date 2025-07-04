@@ -33,3 +33,7 @@ ngrok.exe
 
 # Arquivos de cache do Jest
 coverage/
+
+.venom/
+
+Tokens/
