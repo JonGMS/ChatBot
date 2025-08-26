@@ -19,7 +19,7 @@ try {
       from: `"Bot SMJ" <${process.env.EMAIL_USER}>`,
       to: process.env.EMAIL_TO,
       subject: "Novo atendimento encaminhado para análise",
-      text: `Um novo usuário finalizou o atendimento.\n\nTelefone: ${numero}\nMensagem: ${mensagem}`,
+      text: `Um novo usuário finalizou o atendimento.\n\nTelefone: ${numero}\nMensagem: ${mensagem}\nObs: ${estado}`,
     });
 
     console.log("✅ E-mail enviado com sucesso.");

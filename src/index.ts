@@ -39,34 +39,107 @@ const options = {
 
 create(options as any).then((client: Whatsapp) => {
   console.log("🤖 Bot iniciado!");
+  let nomeCompleto = "";
+  let cpf = "";
 
   client.onMessage(async (message: any) => {
     const texto = message.body?.trim();
     const telefone = message.from;
+    // Validação de áudio recebido
+const isAudio = message.mimetype?.startsWith('audio/');
+if (isAudio && message.mediaKey && message.content) {
+  console.log(`🎤 Áudio recebido de ${telefone} - Tipo: ${message.mimetype}`);
+
+  const audioService = new AudioService();
+  const transcriptionService = new TranscriptionService();
+  const summarizeService = new SummarizeService();
+  const messageRepository = new MessageMemoryRepository();
+
+  const transcribeMessageUseCase = new TranscribeMessageUseCase(
+    transcriptionService, 
+    audioService,
+    summarizeService,
+    messageRepository
+  );
+
+  const response = await transcribeMessageUseCase.execute({
+    smsMessageSid: message.id,
+    mediaContentType0: message.mimetype,
+    numMedia: '1',
+    profileName: message.sender?.pushname || 'Desconhecido',
+    waId: telefone,
+    body: message.body || '',
+    to: message.to,
+    from: telefone,
+    mediaUrl0: message.content
+  });
+
+  if (!response) {
+    await client.sendText(telefone, '⚠️ Não foi possível transcrever o áudio.');
+    return;
+  }// Não foi possivel transcrever - CHAT
+
+  await client.sendText(telefone, `📝 Transcrição do áudio:\n${response}`);
+  return;
+} else if (message.mimetype && message.mimetype.startsWith('audio/') === false) {
+  console.log(`❌ Mensagem recebida não é áudio: ${message.mimetype}`);
+  await client.sendText(telefone, '⚠️ Por favor, envie um áudio no formato suportado.');
+  return;
+}//// Não foi possivel transcrever - LOG SERVIDOR
 
     if (message.isGroupMsg) return;
-
+    let estadoInicial = ""
     const estado = estadosUsuario.get(telefone);
 
-    // INÍCIO (sem estado)
+  //   if (message.mimetype === 'audio/ogg' && message.mediaKey && message.content) {
+  //   const audioService = new AudioService();
+  //   const transcriptionService = new TranscriptionService();
+  //   const summarizeService = new SummarizeService();
+  //   const messageRepository = new MessageMemoryRepository();
+
+  //   const transcribeMessageUseCase = new TranscribeMessageUseCase(
+  //     transcriptionService, 
+  //     audioService,
+  //     summarizeService,
+  //     messageRepository
+  //   );
+
+  //   const response = await transcribeMessageUseCase.execute({
+  //     smsMessageSid: message.id,
+  //     mediaContentType0: message.mimetype,
+  //     numMedia: '1',
+  //     profileName: message.sender?.pushname || 'Desconhecido',
+  //     waId: telefone,
+  //     body: message.body || '',
+  //     to: message.to,
+  //     from: telefone,
+  //     mediaUrl0: message.content // ou use algum método para salvar o áudio temporariamente
+  //   });//Transcreve
+
+  //   if (!response) {
+  //     await client.sendText(telefone, 'Não foi possível transcrever o áudio. 😕');
+  //     return;
+  //   }
+
+  //   await client.sendText(telefone, `📝 Transcrição do áudio:\n${response}`);
+  //   return;
+  // }
+
     if (!estado) {
       estadosUsuario.set(telefone, "aguardando_se_confirmacao");
-
       await client.sendText(telefone,
         "Olá! 👋\nSeja bem-vindo(a) à SMJ Advocacia.\nAntes de continuarmos, por favor, poderia nos informar:\n👉 Você já é cliente do nosso escritório?\n" +
-        "Responda com o número correspondente:\n*[1]* Sim, sou cliente\n*[2]* Não, ainda não sou cliente"
+        "Responda com o número correspondente:\n*[1]* Sim, sou cliente\n*[2]* Não, ainda não sou cliente\n*[3]* Qual é o endereço do escritório?\n*[4]* Quais são os horários de atendimento?"
       );
       return;
     }
 
-    // MENU PRINCIPAL – Cliente ou não
     if (estado === "aguardando_se_confirmacao") {
       if (texto === "1") {
-        estadosUsuario.set(telefone, "cliente_andamento_ou_outro");
+        estadosUsuario.set(telefone, "cliente_envia_nome");
+        estadoInicial = "cliente_envia_nome";
         await client.sendText(telefone,
-          "Perfeito! 😊\nVocê deseja saber o andamento do seu processo?\n" +
-          "*[1]* Sim, quero saber o andamento\n" +
-          "*[2]* Não, é outro assunto"
+          "Tudo certo!\nPor gentileza, nos envie:\n- Seu nome completo 📌"
         );
       } else if (texto === "2") {
         estadosUsuario.set(telefone, "nao_cliente_escolha_assunto");
@@ -74,49 +147,59 @@ create(options as any).then((client: Whatsapp) => {
           "Entendi! 😊\nPoderia nos informar sobre qual assunto você precisa de atendimento?\n" +
           "*[1]* Aposentadoria\n" +
           "*[2]* Benefício previdenciário\n" +
-          "*[3]* Trabalhista"
+          "*[3]* Trabalhista\n" +
+          "*[4]* Auxilio doença"
         );
-      } else {
-        await client.sendText(telefone, "Por favor, responda com *1* ou *2*.");
+      } else if( texto === "3") {
+        await client.sendText(telefone,
+          "📍 Nosso endereço é:\nAv. Duque de Caxias, 80 - Centro, Lages - SC"
+        );
+      } else if( texto === "4") {
+        await client.sendText(telefone,
+          "🕒 Nosso horário de atendimento é de segunda a sexta-feira, das 8h às 12h e das 13h30 às 18h."
+        );
+      }
+
+      else {
+        await client.sendText(telefone, "Por favor, responda com *1*, *2*, *3* ou *4*.");
       }
       return;
     }
 
-    // CLIENTE: andamento ou outro
-    if (estado === "cliente_andamento_ou_outro") {
+    if (estado === "cliente_envia_nome") {
+      nomeCompleto = texto;
+      estadosUsuario.set(telefone, "cliente_envia_cpf");
+      await client.sendText(telefone, "Obrigado! Agora, por favor, envie seu CPF 📄");
+      return;
+    }
+
+    if (estado === "cliente_envia_cpf") {
+      cpf = texto;
+      estadosUsuario.delete(telefone);
+
+      await client.sendText(telefone,
+        "Perfeito! ✅ Seu atendimento foi registrado.\nVocê receberá uma resposta em até 24h úteis."
+      );
+
+      const corpoEmail = `🤖 Novo atendimento do cliente:\n📱 Telefone: ${telefone}\n👤 Nome: ${nomeCompleto}\n🆔 CPF: ${cpf}`;
+      
+      await enviarEmailAssuntoSimples(telefone, "Novo atendimento via WhatsApp", corpoEmail);
+      
+
+
+      // limpa variáveis
+      nomeCompleto = "";
+      cpf = "";
+      return;
+    }
+
+    if (estado === "nao_cliente_escolha_assunto") {
       if (texto === "1") {
         estadosUsuario.set(telefone, "cliente_envia_nome");
         await client.sendText(telefone,
-          "Tudo certo!\nPor gentileza, nos envie:\n- Seu nome completo 📌"
+          "Ótimo! Para atendimento de aposentadoria, por favor envie seu nome completo 📌"
         );
-        await client.sendText(telefone,
-          "Sua mensagem será encaminhada ao responsável e você receberá uma resposta em até 24 horas úteis. ⏱"// 📩 EMAIL!!!!!!!!!
-        );
-        
-        await enviarEmailAssuntoSimples(telefone, "Usuário finalizou com a opção 'outro assunto'.", estado);
-      } else if (texto === "2") {
-        estadosUsuario.delete(telefone); // fim da conversa
-        await client.sendText(telefone,
-          "Certo! Encaminharemos seu atendimento para análise." // 📩 EMAIL!!!!!!!!!
-        );
-        await enviarEmailAssuntoSimples(telefone, "Usuário finalizou com a opção 'outro assunto'.", estado);
-      } else {
-        await client.sendText(telefone, "Por favor, responda com *1* ou *2*.");
-      }
-      return;
-    }
-
-    // NÃO CLIENTE: escolha do assunto
-    if (estado === "nao_cliente_escolha_assunto") {
-      if (texto === "1") {
-        estadosUsuario.delete(telefone);
-        await client.sendText(telefone,
-          "Ótimo! Para atendimento de aposentadoria, é necessário agendar um horário com a Dra. Sandra.\n" +
-          "Por favor, envie seu nome completo, que retornaremos com as opções de agendamento.\n" +
-          "Ou se preferir, entre em contato pelo telefone: (49) 3289-3000 📆📞"// 📩 EMAIL!!!!!!!!! e Fazer um recebedor de nome
-        );
-        await enviarEmailAssuntoSimples(telefone, "Usuário finalizou com a opção 'outro assunto'.", estado);
-      } else if (texto === "2" || texto === "3") {
+      } else if (texto === "2" || texto === "3" || texto === "4") {
         estadosUsuario.delete(telefone);
         await client.sendText(telefone,
           "Perfeito! ✅\nVocê pode comparecer diretamente ao escritório sem necessidade de agendamento.\n\n" +
@@ -130,12 +213,7 @@ create(options as any).then((client: Whatsapp) => {
       return;
     }
 
-    // Caso o usuário continue após o fluxo
-    if (estado === "cliente_envia_nome") {
-      estadosUsuario.delete(telefone);
-      await client.sendText(telefone, "Obrigado! Seu atendimento foi registrado. ✅");// 📩 EMAIL!!!!!!!!!
-    }
-    await enviarEmailAssuntoSimples(telefone, "Usuário finalizou com a opção 'outro assunto'.", estado);
+    
   });
 });
 
